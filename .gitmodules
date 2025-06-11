@@ -1,0 +1,3 @@
+[submodule "cavalier_contours"]
+	path = cavalier_contours
+	url = https://github.com/jbuckmccready/cavalier_contours

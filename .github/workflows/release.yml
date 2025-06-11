@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Get version from tag
+      id: get_version
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag -replace '^v', ''
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "Version: $version"
+    
+    - name: Update project version
+      run: |
+        $version = "${{ steps.get_version.outputs.version }}"
+        $propsFile = "Directory.Build.props"
+        
+        # Read the Directory.Build.props file
+        $content = Get-Content $propsFile -Raw
+        
+        # Update the Version property
+        $content = $content -replace '<Version>.*</Version>', "<Version>$version</Version>"
+        
+        # Write back to file
+        Set-Content $propsFile -Value $content -Encoding UTF8
+        
+        Write-Host "Updated version to $version in Directory.Build.props"
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+    
+    - name: Test
+      run: dotnet test --no-build --configuration Release --verbosity normal
+    
+    - name: Pack
+      run: dotnet pack --no-build --configuration Release --output ./artifacts
+    
+    - name: Publish to NuGet
+      run: |
+        $packages = Get-ChildItem ./artifacts/*.nupkg
+        foreach ($package in $packages) {
+          Write-Host "Publishing $($package.Name)"
+          dotnet nuget push $package.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        }
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        body: |
+          Release ${{ github.ref_name }}
+          
+          ## Changes
+          - Updated to version ${{ steps.get_version.outputs.version }}
+        files: ./artifacts/*.nupkg
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
