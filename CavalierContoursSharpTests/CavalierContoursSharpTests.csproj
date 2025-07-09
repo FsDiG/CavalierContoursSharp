@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
@@ -7,6 +7,7 @@
 		<LangVersion>latest</LangVersion>
 		<IsPackable>false</IsPackable>
 		<IsTestProject>true</IsTestProject>
+		<Platforms>x64</Platforms>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -23,5 +24,12 @@
 	<ItemGroup>
 		<Using Include="Xunit" />
 	</ItemGroup>
+
+	<Target Name="CopyNativeLibraries" AfterTargets="Build">
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\..\CavalierContoursSharp\runtimes\win-x64\native\cavalier_contours_ffi.dll" 
+			  DestinationFolder="$(OutputPath)" 
+			  SkipUnchangedFiles="true" 
+			  Condition="Exists('$(MSBuildProjectDirectory)\..\CavalierContoursSharp\runtimes\win-x64\native\cavalier_contours_ffi.dll')" />
+	</Target>
 
 </Project>
