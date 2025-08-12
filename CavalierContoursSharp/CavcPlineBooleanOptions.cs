@@ -22,4 +22,13 @@ public struct CavcPlineBooleanOptions
     {
         return $"CavcPlineBooleanOptions [Pline1AabbIndex={Pline1AabbIndex}, PosEqualEps={PosEqualEps:F6}]";
     }
+
+    public static CavcPlineBooleanOptions Default()
+    {
+        return new CavcPlineBooleanOptions()
+        {
+            Pline1AabbIndex = IntPtr.Zero,
+            PosEqualEps = 0.001
+        };
+    }
 }

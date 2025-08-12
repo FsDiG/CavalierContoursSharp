@@ -1,3 +1,4 @@
+using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
 
 namespace CavalierContoursSharp;
@@ -39,5 +40,18 @@ public struct CavcPlineParallelOffsetOptions
     public override string ToString()
     {
         return $"CavcPlineParallelOffsetOptions [AabbIndex={AabbIndex}, PosEqualEps={PosEqualEps:F6}, SliceJoinEps={SliceJoinEps:F6}, OffsetDistEps={OffsetDistEps:F6}, HandleSelfIntersects={HandleSelfIntersects}]";
+    }
+
+    public static CavcPlineParallelOffsetOptions Default()
+    {
+        const double eps = 1e-6;
+        return new CavcPlineParallelOffsetOptions
+        {
+            AabbIndex = IntPtr.Zero,
+            PosEqualEps = eps,
+            SliceJoinEps = eps,
+            OffsetDistEps = eps,
+            HandleSelfIntersects = 0
+        };
     }
 }
