@@ -161,6 +161,15 @@ internal static class Cavc
     [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
     public static extern int cavc_pline_remove_redundant(IntPtr pline, double pos_equal_eps);
 
+    /// <summary>Get user data from a polyline.</summary>
+    /// <returns>User data pointer</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr cavc_pline_get_userdata(IntPtr pline);
+
+    /// <summary>Set user data for a polyline.</summary>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void cavc_pline_set_userdata(IntPtr pline, IntPtr userdata);
+
     /// <summary>Wraps PlineSource::extents.</summary>
     /// <returns>0 on success, 1 if pline is null, 2 if vertex count &lt; 2</returns>
     [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
@@ -195,6 +204,26 @@ internal static class Cavc
         out IntPtr posPlines,
         out IntPtr negPlines
     );
+
+    /// <summary>Initialize self-intersect options.</summary>
+    /// <returns>0 on success, 1 if options is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_pline_self_intersect_o_init(IntPtr options);
+
+    /// <summary>Scan for self-intersections in a polyline.</summary>
+    /// <returns>0 on success, 1 if pline is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_pline_scan_for_self_intersect(IntPtr pline, IntPtr options, out IntPtr result);
+
+    /// <summary>Initialize contains options.</summary>
+    /// <returns>0 on success, 1 if options is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_pline_contains_o_init(IntPtr options);
+
+    /// <summary>Check if a point is contained within a polyline.</summary>
+    /// <returns>0 on success, 1 if pline is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_pline_contains(IntPtr pline, double x, double y, IntPtr options, out int result);
     #endregion
 
     #endregion
@@ -282,5 +311,191 @@ internal static class Cavc
     /// <returns>0 on success, 1 if options is null</returns>
     [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
     public static extern int cavc_pline_boolean_o_init(IntPtr options);
+
+    /// <summary>Write default option values to a cavc_shape_offset_o.</summary>
+    /// <returns>0 on success, 1 if options is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_offset_o_init(IntPtr options);
     #endregion
+
+    #region Shape
+    /// <summary>Create a new cavc_shape object from a polyline list.</summary>
+    /// <returns>0 on success, 1 if plinelist is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_create(IntPtr plinelist, out IntPtr shape);
+
+    /// <summary>Free an existing cavc_shape object.</summary>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void cavc_shape_f(IntPtr shape);
+
+    /// <summary>Wraps Shape::parallel_offset.</summary>
+    /// <returns>0 on success, 1 if shape is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_parallel_offset(
+        IntPtr shape,
+        double offset,
+        IntPtr options,
+        out IntPtr result
+    );
+
+    /// <summary>Get the count of counter-clockwise polylines in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_ccw_count(IntPtr shape, out uint count);
+
+    /// <summary>Get the vertex count of a specific counter-clockwise polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_ccw_polyline_count(
+        IntPtr shape,
+        uint polyline_index,
+        out uint count
+    );
+
+    /// <summary>Get whether a specific counter-clockwise polyline in a shape is closed.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_ccw_polyline_is_closed(
+        IntPtr shape,
+        uint polyline_index,
+        out byte is_closed
+    );
+
+    /// <summary>Get vertex data of a counter-clockwise polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_ccw_polyline_vertex_data(
+        IntPtr shape,
+        uint polyline_index,
+        [Out] CavcVertex[] vertex_data
+    );
+
+    /// <summary>Set userdata values of a CCW polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_set_ccw_pline_userdata_values(
+        IntPtr shape,
+        uint polyline_index,
+        [In] ulong[] userdata_values,
+        uint count
+    );
+
+    /// <summary>Get userdata value count of a CCW polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_ccw_pline_userdata_count(
+        IntPtr shape,
+        uint polyline_index,
+        out uint count
+    );
+
+    /// <summary>Get userdata values of a CCW polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_ccw_pline_userdata_values(
+        IntPtr shape,
+        uint polyline_index,
+        [Out] ulong[] userdata_values
+    );
+
+    /// <summary>Get the count of clockwise polylines in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_cw_count(IntPtr shape, out uint count);
+
+    /// <summary>Get the vertex count of a specific clockwise polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_cw_polyline_count(
+        IntPtr shape,
+        uint polyline_index,
+        out uint count
+    );
+
+    /// <summary>Get whether a specific clockwise polyline in a shape is closed.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_cw_polyline_is_closed(
+        IntPtr shape,
+        uint polyline_index,
+        out byte is_closed
+    );
+
+    /// <summary>Get vertex data of a clockwise polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_cw_polyline_vertex_data(
+        IntPtr shape,
+        uint polyline_index,
+        [Out] CavcVertex[] vertex_data
+    );
+
+    /// <summary>Set userdata values of a CW polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_set_cw_pline_userdata_values(
+        IntPtr shape,
+        uint polyline_index,
+        [In] ulong[] userdata_values,
+        uint count
+    );
+
+    /// <summary>Get userdata value count of a CW polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null, 2 if polyline_index out of bounds</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_cw_pline_userdata_count(
+        IntPtr shape,
+        uint polyline_index,
+        out uint count
+    );
+
+    /// <summary>Get userdata values of a CW polyline in a shape.</summary>
+    /// <returns>0 on success, 1 if shape is null</returns>
+    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int cavc_shape_get_cw_pline_userdata_values(
+        IntPtr shape,
+        uint polyline_index,
+        [Out] ulong[] userdata_values
+    );
+    #endregion
+}
+
+/// <summary>Options for cavc_pline_boolean.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct CavcBooleanOptions
+{
+    /// <summary>Spatial index of the first polyline segment bounding boxes.</summary>
+    public IntPtr pline1_aabb_index;
+    /// <summary>Positive real number used to determine if two positions are equal.</summary>
+    public double pos_equal_eps;
+    /// <summary>Positive real number used to determine collapsed area threshold (set to NaN for None).</summary>
+    public double collapsed_area_eps;
+}
+
+/// <summary>Options for cavc_shape_parallel_offset.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct CavcShapeOffsetOptions
+{
+    /// <summary>Positive real number used to determine if two positions are equal.</summary>
+    public double pos_equal_eps;
+    /// <summary>Positive real number used to determine if two real numbers are equal.</summary>
+    public double slice_join_eps;
+    /// <summary>Positive real number used to determine if two real numbers are equal.</summary>
+    public double offset_dist_eps;
+}
+
+/// <summary>Options for cavc_pline_self_intersect.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct CavcPlineSelfIntersectOptions
+{
+    /// <summary>Positive real number used to determine if two positions are equal.</summary>
+    public double pos_equal_eps;
+}
+
+/// <summary>Options for cavc_pline_contains.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct CavcPlineContainsOptions
+{
+    /// <summary>Positive real number used to determine if two positions are equal.</summary>
+    public double pos_equal_eps;
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -54,6 +54,22 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
         );
         ThrowIfError(result, "Failed to create polyline from vertices");
         Handle = handle;
+    }
+
+    /// <summary>Create a copy of an existing polyline.</summary>
+    /// <param name="source">Source polyline to clone.</param>
+    public Polyline(Polyline source)
+    {
+        if (source == null)
+            throw new ArgumentNullException(nameof(source));
+        source.ThrowIfDisposed();
+
+        int errorCode = Cavc.cavc_pline_clone(source.Handle, out var clonedHandle);
+        if (errorCode == 1)
+            throw new NullReferenceException("Source is null or disposed, cannot clone!");
+        Handle = clonedHandle;
+        if (Handle == IntPtr.Zero)
+            throw new InvalidOperationException("Failed to clone polyline");
     }
     #endregion
 
@@ -136,6 +152,22 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
             return area;
         }
     }
+
+    /// <summary>Get or set user data associated with this polyline.</summary>
+    /// <remarks>User data is stored as an IntPtr and can be used to associate custom data with the polyline.</remarks>
+    public IntPtr UserData
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return Cavc.cavc_pline_get_userdata(Handle);
+        }
+        set
+        {
+            ThrowIfDisposed();
+            Cavc.cavc_pline_set_userdata(Handle, value);
+        }
+    }
     #endregion
 
     #region Vertex Management
@@ -213,6 +245,27 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
         ThrowIfDisposed();
         int result = Cavc.cavc_pline_clear(Handle);
         ThrowIfError(result, "Failed to clear polyline");
+    }
+
+    /// <summary>Reserve capacity for vertices to improve performance when adding many vertices.</summary>
+    /// <param name="capacity">Number of vertices to reserve space for.</param>
+    public void Reserve(uint capacity)
+    {
+        ThrowIfDisposed();
+        Cavc.cavc_pline_reserve(Handle, capacity);
+    }
+
+    /// <summary>Create a deep copy of this polyline.</summary>
+    /// <returns>New polyline instance that is a copy of this one.</returns>
+    public Polyline Clone()
+    {
+        ThrowIfDisposed();
+        int errorCode = Cavc.cavc_pline_clone(Handle, out IntPtr clonedHandle);
+        if (errorCode == 1)
+            throw new NullReferenceException("Source is null or disposed, cannot clone!");
+        if (clonedHandle == IntPtr.Zero)
+            throw new InvalidOperationException("Failed to clone polyline");
+        return new Polyline(clonedHandle);
     }
     #endregion
 
@@ -299,6 +352,84 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
         minX = minY = maxX = maxY = 0; // Unreachable, but satisfy compiler
         return false;
     }
+
+    /// <summary>Check if a point is contained within the polyline.</summary>
+    /// <param name="x">X coordinate of the point to test.</param>
+    /// <param name="y">Y coordinate of the point to test.</param>
+    /// <param name="options">Contains options, or null for defaults.</param>
+    /// <returns>True if the point is contained within the polyline, false otherwise.</returns>
+    public bool Contains(double x, double y, CavcPlineContainsOptions? options = null)
+    {
+        ThrowIfDisposed();
+
+        IntPtr optionsPtr = IntPtr.Zero;
+        if (options.HasValue)
+        {
+            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options.Value));
+            Marshal.StructureToPtr(options.Value, optionsPtr, false);
+        }
+        else
+        {
+            // Use default options
+            var defaultOptions = new CavcPlineContainsOptions { pos_equal_eps = 1e-5 };
+            Cavc.cavc_pline_contains_o_init(Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions)));
+            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions));
+            Marshal.StructureToPtr(defaultOptions, optionsPtr, false);
+        }
+
+        try
+        {
+            int result = Cavc.cavc_pline_contains(Handle, x, y, optionsPtr, out int containsResult);
+            ThrowIfError(result, "Failed to check contains");
+            return containsResult != 0;
+        }
+        finally
+        {
+            if (optionsPtr != IntPtr.Zero)
+                Marshal.FreeHGlobal(optionsPtr);
+        }
+    }
+
+    /// <summary>Scan for self-intersections in the polyline.</summary>
+    /// <param name="options">Self-intersect options, or null for defaults.</param>
+    /// <returns>List of intersection results, or empty list if no intersections found.</returns>
+    public PolylineList ScanForSelfIntersections(CavcPlineSelfIntersectOptions? options = null)
+    {
+        ThrowIfDisposed();
+
+        IntPtr optionsPtr = IntPtr.Zero;
+        if (options.HasValue)
+        {
+            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options.Value));
+            Marshal.StructureToPtr(options.Value, optionsPtr, false);
+        }
+        else
+        {
+            // Use default options
+            var defaultOptions = new CavcPlineSelfIntersectOptions { pos_equal_eps = 1e-5 };
+            Cavc.cavc_pline_self_intersect_o_init(
+                Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions))
+            );
+            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions));
+            Marshal.StructureToPtr(defaultOptions, optionsPtr, false);
+        }
+
+        try
+        {
+            int result = Cavc.cavc_pline_scan_for_self_intersect(
+                Handle,
+                optionsPtr,
+                out IntPtr resultList
+            );
+            ThrowIfError(result, "Failed to scan for self intersections");
+            return new PolylineList(resultList);
+        }
+        finally
+        {
+            if (optionsPtr != IntPtr.Zero)
+                Marshal.FreeHGlobal(optionsPtr);
+        }
+    }
     #endregion
 
     #region Operations
@@ -347,7 +478,7 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
     public (PolylineList Positive, PolylineList Negative) BooleanOperation(
         Polyline other,
         BooleanOp operation,
-        CavcPlineBooleanOptions? options = null
+        CavcBooleanOptions? options = null
     )
     {
         ThrowIfDisposed();
@@ -360,6 +491,19 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
         {
             optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options.Value));
             Marshal.StructureToPtr(options.Value, optionsPtr, false);
+        }
+        else
+        {
+            // Use default options
+            var defaultOptions = new CavcBooleanOptions
+            {
+                pline1_aabb_index = IntPtr.Zero,
+                pos_equal_eps = 1e-5,
+                collapsed_area_eps = double.NaN
+            };
+            Cavc.cavc_pline_boolean_o_init(Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions)));
+            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions));
+            Marshal.StructureToPtr(defaultOptions, optionsPtr, false);
         }
 
         try
@@ -453,7 +597,7 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
         {
             var sb = new System.Text.StringBuilder();
             sb.Append($"Polyline [VertexCount={VertexCount}, IsClosed={IsClosed}");
-            
+
             // Add path length if available
             try
             {
@@ -463,7 +607,7 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
             {
                 // Ignore if path length calculation fails
             }
-            
+
             // Add area if closed and available
             if (IsClosed)
             {
@@ -476,9 +620,9 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
                     // Ignore if area calculation fails
                 }
             }
-            
+
             sb.Append("] Vertices: ");
-            
+
             int count = VertexCount;
             if (count == 0)
             {
@@ -490,7 +634,8 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
                 sb.Append("[");
                 for (uint i = 0; i < count; i++)
                 {
-                    if (i > 0) sb.Append(", ");
+                    if (i > 0)
+                        sb.Append(", ");
                     var vertex = GetVertex(i);
                     sb.Append($"({vertex.X:F3},{vertex.Y:F3}");
                     if (vertex.Bulge != 0)
@@ -505,7 +650,8 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
                 sb.Append("[");
                 for (uint i = 0; i < 3; i++)
                 {
-                    if (i > 0) sb.Append(", ");
+                    if (i > 0)
+                        sb.Append(", ");
                     var vertex = GetVertex(i);
                     sb.Append($"({vertex.X:F3},{vertex.Y:F3}");
                     if (vertex.Bulge != 0)
@@ -515,7 +661,8 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
                 sb.Append(", ..., ");
                 for (uint i = (uint)(count - 2); i < count; i++)
                 {
-                    if (i > count - 2) sb.Append(", ");
+                    if (i > count - 2)
+                        sb.Append(", ");
                     var vertex = GetVertex(i);
                     sb.Append($"({vertex.X:F3},{vertex.Y:F3}");
                     if (vertex.Bulge != 0)
@@ -524,7 +671,7 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
                 }
                 sb.Append("]");
             }
-            
+
             return sb.ToString();
         }
         catch

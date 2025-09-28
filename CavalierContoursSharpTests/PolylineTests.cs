@@ -1,4 +1,4 @@
-﻿using CavalierContoursSharp;
+using CavalierContoursSharp;
 using Xunit.Abstractions;
 
 namespace CavalierContoursSharpTests;
@@ -326,5 +326,221 @@ public class PolylineTests
         }
 
         Assert.Equal(3, count);
+    }
+
+    [Fact]
+    public void CanGetAndSetUserData()
+    {
+        // Arrange
+        using var polyline = new Polyline();
+        IntPtr testData = new IntPtr(12345);
+
+        // Act
+        polyline.UserData = testData;
+        IntPtr retrievedData = polyline.UserData;
+
+        // Assert
+        Assert.Equal(testData, retrievedData);
+    }
+
+    [Fact]
+    public void UserDataDefaultsToZero()
+    {
+        // Arrange & Act
+        using var polyline = new Polyline();
+
+        // Assert
+        Assert.Equal(IntPtr.Zero, polyline.UserData);
+    }
+
+    [Fact]
+    public void CanClonePolyline()
+    {
+        // Arrange
+        using var original = new Polyline();
+        original.AddVertex(0, 0, 0.5);
+        original.AddVertex(10, 0, 0);
+        original.AddVertex(10, 10, -0.5);
+        original.IsClosed = true;
+        original.UserData = new IntPtr(999);
+
+        // Act
+        using var cloned = original.Clone();
+
+        // Assert
+        Assert.Equal(original.VertexCount, cloned.VertexCount);
+        Assert.Equal(original.IsClosed, cloned.IsClosed);
+        Assert.Equal(original.UserData, cloned.UserData);
+        
+        // Verify vertices are identical
+        for (uint i = 0; i < original.VertexCount; i++)
+        {
+            var originalVertex = original.GetVertex(i);
+            var clonedVertex = cloned.GetVertex(i);
+            Assert.Equal(originalVertex.X, clonedVertex.X);
+            Assert.Equal(originalVertex.Y, clonedVertex.Y);
+            Assert.Equal(originalVertex.Bulge, clonedVertex.Bulge);
+        }
+    }
+
+    [Fact]
+    public void CanCreatePolylineFromClone()
+    {
+        // Arrange
+        using var original = new Polyline();
+        original.AddVertex(5, 5);
+        original.AddVertex(15, 5);
+        original.IsClosed = true;
+
+        // Act
+        using var cloned = new Polyline(original);
+
+        // Assert
+        Assert.Equal(original.VertexCount, cloned.VertexCount);
+        Assert.Equal(original.IsClosed, cloned.IsClosed);
+        
+        var originalVertex = original.GetVertex(0);
+        var clonedVertex = cloned.GetVertex(0);
+        Assert.Equal(originalVertex.X, clonedVertex.X);
+        Assert.Equal(originalVertex.Y, clonedVertex.Y);
+    }
+
+    [Fact]
+    public void ClonedPolylineIsIndependent()
+    {
+        // Arrange
+        using var original = new Polyline();
+        original.AddVertex(0, 0);
+        using var cloned = original.Clone();
+
+        // Act - Modify original
+        original.AddVertex(10, 10);
+        original.IsClosed = true;
+
+        // Assert - Clone should be unchanged
+        Assert.Equal(1, cloned.VertexCount);
+        Assert.False(cloned.IsClosed);
+        Assert.Equal(2, original.VertexCount);
+        Assert.True(original.IsClosed);
+    }
+
+    [Fact]
+    public void CanReserveCapacity()
+    {
+        // Arrange
+        using var polyline = new Polyline();
+
+        // Act - Reserve should not throw
+        polyline.Reserve(100);
+
+        // Assert - Should still be able to add vertices normally
+        polyline.AddVertex(0, 0);
+        polyline.AddVertex(10, 10);
+        Assert.Equal(2, polyline.VertexCount);
+    }
+
+    [Fact]
+    public void CanCheckContainsPoint()
+    {
+        // Arrange - Create a simple closed square
+        using var polyline = new Polyline(
+            [
+                new CavcVertex(0, 0),
+                new CavcVertex(10, 0),
+                new CavcVertex(10, 10),
+                new CavcVertex(0, 10)
+            ],
+            true
+        );
+
+        // Act & Assert - Point inside
+        Assert.True(polyline.Contains(5, 5));
+        
+        // Act & Assert - Point outside
+        Assert.False(polyline.Contains(15, 15));
+        
+        // Act & Assert - Point on edge (may vary based on epsilon)
+        Assert.True(polyline.Contains(0, 5));
+    }
+
+    [Fact]
+    public void CanCheckContainsWithOptions()
+    {
+        // Arrange
+        using var polyline = new Polyline(
+            [
+                new CavcVertex(0, 0),
+                new CavcVertex(10, 0),
+                new CavcVertex(10, 10),
+                new CavcVertex(0, 10)
+            ],
+            true
+        );
+        var options = new CavcPlineContainsOptions { pos_equal_eps = 1e-6 };
+
+        // Act & Assert
+        Assert.True(polyline.Contains(5, 5, options));
+        Assert.False(polyline.Contains(15, 15, options));
+    }
+
+    [Fact]
+    public void CanScanForSelfIntersections()
+    {
+        // Arrange - Create a self-intersecting polyline (figure-8 shape)
+        using var polyline = new Polyline();
+        polyline.AddVertex(0, 0);
+        polyline.AddVertex(10, 10);
+        polyline.AddVertex(10, 0);
+        polyline.AddVertex(0, 10);
+        polyline.IsClosed = true;
+
+        // Act
+        var intersections = polyline.ScanForSelfIntersections();
+
+        // Assert - Should find intersections in a figure-8
+        Assert.NotNull(intersections);
+        // Note: The exact count depends on the implementation
+        // We just verify the method doesn't throw and returns a valid result
+    }
+
+    [Fact]
+    public void CanScanForSelfIntersectionsWithOptions()
+    {
+        // Arrange
+        using var polyline = new Polyline();
+        polyline.AddVertex(0, 0);
+        polyline.AddVertex(5, 5);
+        polyline.AddVertex(10, 0);
+        polyline.AddVertex(5, -5);
+        polyline.IsClosed = true;
+        
+        var options = new CavcPlineSelfIntersectOptions { pos_equal_eps = 1e-6 };
+
+        // Act
+        var intersections = polyline.ScanForSelfIntersections(options);
+
+        // Assert
+        Assert.NotNull(intersections);
+    }
+
+    [Fact]
+    public void SelfIntersectionScanOnSimpleShapeReturnsEmpty()
+    {
+        // Arrange - Simple non-self-intersecting square
+        using var polyline = new Polyline(
+            [
+                new CavcVertex(0, 0),
+                new CavcVertex(10, 0),
+                new CavcVertex(10, 10),
+                new CavcVertex(0, 10)
+            ],
+            true
+        );
+
+        // Act
+        var intersections = polyline.ScanForSelfIntersections();
+
+        // Assert - Should have no intersections
+        Assert.Equal(0, intersections.Count);
     }
 }

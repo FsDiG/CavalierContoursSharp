@@ -428,10 +428,11 @@ public partial class BooleanOperationTests(ITestOutputHelper output)
         using var square1 = CreateSquare(10);
         using var square2 = CreateSquare(10, 5, 5);
         // Create options with custom epsilon
-        var options = new CavcPlineBooleanOptions
+        var options = new CavcBooleanOptions
         {
-            PosEqualEps = 0.0001,
-            Pline1AabbIndex = nint.Zero
+            pos_equal_eps = 0.0001,
+            pline1_aabb_index = IntPtr.Zero,
+            collapsed_area_eps = 1e-5
         };
 
         // Act
