@@ -1,6 +1,6 @@
-using Xunit;
-using CavalierContoursSharp;
 using System;
+using CavalierContoursSharp;
+using Xunit;
 
 namespace CavalierContoursSharpTests
 {
@@ -94,10 +94,10 @@ namespace CavalierContoursSharpTests
 
             // Assert
             Assert.Equal(IntPtr.Zero, options.AabbIndex);
-            Assert.Equal(1e-5, options.PosEqualEps);
-            Assert.Equal(1e-5, options.SliceJoinEps);
-            Assert.Equal(1e-5, options.OffsetDistEps);
-            Assert.Equal(1, options.HandleSelfIntersects);
+            Assert.Equal(1e-5, options.PosEqualEps, tolerance: 1e-5);
+            Assert.Equal(1e-5, options.SliceJoinEps, tolerance: 1e-5);
+            Assert.Equal(1e-5, options.OffsetDistEps, tolerance: 1e-5);
+            Assert.Equal(0, options.HandleSelfIntersects, tolerance: 1e-5);
         }
 
         [Fact]

@@ -329,31 +329,6 @@ public class PolylineTests
     }
 
     [Fact]
-    public void CanGetAndSetUserData()
-    {
-        // Arrange
-        using var polyline = new Polyline();
-        IntPtr testData = new IntPtr(12345);
-
-        // Act
-        polyline.UserData = testData;
-        IntPtr retrievedData = polyline.UserData;
-
-        // Assert
-        Assert.Equal(testData, retrievedData);
-    }
-
-    [Fact]
-    public void UserDataDefaultsToZero()
-    {
-        // Arrange & Act
-        using var polyline = new Polyline();
-
-        // Assert
-        Assert.Equal(IntPtr.Zero, polyline.UserData);
-    }
-
-    [Fact]
     public void CanClonePolyline()
     {
         // Arrange
@@ -362,7 +337,6 @@ public class PolylineTests
         original.AddVertex(10, 0, 0);
         original.AddVertex(10, 10, -0.5);
         original.IsClosed = true;
-        original.UserData = new IntPtr(999);
 
         // Act
         using var cloned = original.Clone();
@@ -370,8 +344,7 @@ public class PolylineTests
         // Assert
         Assert.Equal(original.VertexCount, cloned.VertexCount);
         Assert.Equal(original.IsClosed, cloned.IsClosed);
-        Assert.Equal(original.UserData, cloned.UserData);
-        
+
         // Verify vertices are identical
         for (uint i = 0; i < original.VertexCount; i++)
         {
@@ -398,7 +371,7 @@ public class PolylineTests
         // Assert
         Assert.Equal(original.VertexCount, cloned.VertexCount);
         Assert.Equal(original.IsClosed, cloned.IsClosed);
-        
+
         var originalVertex = original.GetVertex(0);
         var clonedVertex = cloned.GetVertex(0);
         Assert.Equal(originalVertex.X, clonedVertex.X);
@@ -440,50 +413,6 @@ public class PolylineTests
     }
 
     [Fact]
-    public void CanCheckContainsPoint()
-    {
-        // Arrange - Create a simple closed square
-        using var polyline = new Polyline(
-            [
-                new CavcVertex(0, 0),
-                new CavcVertex(10, 0),
-                new CavcVertex(10, 10),
-                new CavcVertex(0, 10)
-            ],
-            true
-        );
-
-        // Act & Assert - Point inside
-        Assert.True(polyline.Contains(5, 5));
-        
-        // Act & Assert - Point outside
-        Assert.False(polyline.Contains(15, 15));
-        
-        // Act & Assert - Point on edge (may vary based on epsilon)
-        Assert.True(polyline.Contains(0, 5));
-    }
-
-    [Fact]
-    public void CanCheckContainsWithOptions()
-    {
-        // Arrange
-        using var polyline = new Polyline(
-            [
-                new CavcVertex(0, 0),
-                new CavcVertex(10, 0),
-                new CavcVertex(10, 10),
-                new CavcVertex(0, 10)
-            ],
-            true
-        );
-        var options = new CavcPlineContainsOptions { pos_equal_eps = 1e-6 };
-
-        // Act & Assert
-        Assert.True(polyline.Contains(5, 5, options));
-        Assert.False(polyline.Contains(15, 15, options));
-    }
-
-    [Fact]
     public void CanScanForSelfIntersections()
     {
         // Arrange - Create a self-intersecting polyline (figure-8 shape)
@@ -513,7 +442,7 @@ public class PolylineTests
         polyline.AddVertex(10, 0);
         polyline.AddVertex(5, -5);
         polyline.IsClosed = true;
-        
+
         var options = new CavcPlineSelfIntersectOptions { pos_equal_eps = 1e-6 };
 
         // Act

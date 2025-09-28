@@ -152,22 +152,6 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
             return area;
         }
     }
-
-    /// <summary>Get or set user data associated with this polyline.</summary>
-    /// <remarks>User data is stored as an IntPtr and can be used to associate custom data with the polyline.</remarks>
-    public IntPtr UserData
-    {
-        get
-        {
-            ThrowIfDisposed();
-            return Cavc.cavc_pline_get_userdata(Handle);
-        }
-        set
-        {
-            ThrowIfDisposed();
-            Cavc.cavc_pline_set_userdata(Handle, value);
-        }
-    }
     #endregion
 
     #region Vertex Management
@@ -353,43 +337,6 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
         return false;
     }
 
-    /// <summary>Check if a point is contained within the polyline.</summary>
-    /// <param name="x">X coordinate of the point to test.</param>
-    /// <param name="y">Y coordinate of the point to test.</param>
-    /// <param name="options">Contains options, or null for defaults.</param>
-    /// <returns>True if the point is contained within the polyline, false otherwise.</returns>
-    public bool Contains(double x, double y, CavcPlineContainsOptions? options = null)
-    {
-        ThrowIfDisposed();
-
-        IntPtr optionsPtr = IntPtr.Zero;
-        if (options.HasValue)
-        {
-            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options.Value));
-            Marshal.StructureToPtr(options.Value, optionsPtr, false);
-        }
-        else
-        {
-            // Use default options
-            var defaultOptions = new CavcPlineContainsOptions { pos_equal_eps = 1e-5 };
-            Cavc.cavc_pline_contains_o_init(Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions)));
-            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions));
-            Marshal.StructureToPtr(defaultOptions, optionsPtr, false);
-        }
-
-        try
-        {
-            int result = Cavc.cavc_pline_contains(Handle, x, y, optionsPtr, out int containsResult);
-            ThrowIfError(result, "Failed to check contains");
-            return containsResult != 0;
-        }
-        finally
-        {
-            if (optionsPtr != IntPtr.Zero)
-                Marshal.FreeHGlobal(optionsPtr);
-        }
-    }
-
     /// <summary>Scan for self-intersections in the polyline.</summary>
     /// <param name="options">Self-intersect options, or null for defaults.</param>
     /// <returns>List of intersection results, or empty list if no intersections found.</returns>
@@ -397,22 +344,12 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
     {
         ThrowIfDisposed();
 
+        options ??= new CavcPlineSelfIntersectOptions() { };
+
         IntPtr optionsPtr = IntPtr.Zero;
-        if (options.HasValue)
-        {
-            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options.Value));
-            Marshal.StructureToPtr(options.Value, optionsPtr, false);
-        }
-        else
-        {
-            // Use default options
-            var defaultOptions = new CavcPlineSelfIntersectOptions { pos_equal_eps = 1e-5 };
-            Cavc.cavc_pline_self_intersect_o_init(
-                Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions))
-            );
-            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions));
-            Marshal.StructureToPtr(defaultOptions, optionsPtr, false);
-        }
+
+        optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options.Value));
+        Marshal.StructureToPtr(options.Value, optionsPtr, false);
 
         try
         {
@@ -486,24 +423,21 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
             throw new ArgumentNullException(nameof(other));
         other.ThrowIfDisposed();
 
+        options ??= new CavcBooleanOptions()
+        {
+            pline1_aabb_index = IntPtr.Zero,
+            pos_equal_eps = 1e-5,
+            collapsed_area_eps = double.NaN
+        };
+
         IntPtr optionsPtr = IntPtr.Zero;
+        // Allocate native memory for options and initialize defaults via FFI to ensure correct layout/alignment
+        optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(CavcBooleanOptions)));
+        Cavc.cavc_pline_boolean_o_init(optionsPtr);
+        // If user provided options, overwrite initialized defaults with provided values
         if (options.HasValue)
         {
-            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options.Value));
             Marshal.StructureToPtr(options.Value, optionsPtr, false);
-        }
-        else
-        {
-            // Use default options
-            var defaultOptions = new CavcBooleanOptions
-            {
-                pline1_aabb_index = IntPtr.Zero,
-                pos_equal_eps = 1e-5,
-                collapsed_area_eps = double.NaN
-            };
-            Cavc.cavc_pline_boolean_o_init(Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions)));
-            optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(defaultOptions));
-            Marshal.StructureToPtr(defaultOptions, optionsPtr, false);
         }
 
         try
@@ -520,7 +454,7 @@ public class Polyline : IDisposable, IEnumerable<CavcVertex>
             )
                 ThrowLastError("Failed to perform boolean operation");
 
-            return (new PolylineList(posList), new PolylineList(negList));
+            return (new PolylineList(posList, true), new PolylineList(negList, true));
         }
         finally
         {

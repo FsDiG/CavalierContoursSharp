@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 
 namespace CavalierContoursSharp;
 
@@ -76,7 +76,7 @@ public class PolylineList : IDisposable, IEnumerable<Polyline>
             if (Cavc.cavc_plinelist_get_pline(Handle, (uint)index, out IntPtr plineHandle) != 0)
                 throw new InvalidOperationException("Failed to get polyline");
 
-            return new Polyline(plineHandle);
+            return new Polyline(plineHandle, owner: false);
         }
     }
 

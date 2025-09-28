@@ -110,13 +110,10 @@ public partial class BooleanOperationTests(ITestOutputHelper output)
         Assert.Single(positive);
         Assert.Empty(negative);
 
-        using var result = positive[0];
+        var result = positive[0];
         Assert.True(result.IsClosed);
         Assert.Equal(4, result.VertexCount);
         Assert.Equal(100, Math.Abs(result.Area), 6);
-
-        positive.Dispose();
-        negative.Dispose();
     }
 
     [Fact]
@@ -315,7 +312,7 @@ public partial class BooleanOperationTests(ITestOutputHelper output)
             Assert.True(result.IsClosed);
             totalArea += Math.Abs(result.Area);
         }
-        
+
         // Total area should be square area minus intersection area
         Assert.InRange(totalArea, 4, 15);
     }

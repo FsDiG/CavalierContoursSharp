@@ -213,17 +213,16 @@ internal static class Cavc
     /// <summary>Scan for self-intersections in a polyline.</summary>
     /// <returns>0 on success, 1 if pline is null</returns>
     [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int cavc_pline_scan_for_self_intersect(IntPtr pline, IntPtr options, out IntPtr result);
+    public static extern int cavc_pline_scan_for_self_intersect(
+        IntPtr pline,
+        IntPtr options,
+        out IntPtr result
+    );
 
     /// <summary>Initialize contains options.</summary>
     /// <returns>0 on success, 1 if options is null</returns>
     [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
     public static extern int cavc_pline_contains_o_init(IntPtr options);
-
-    /// <summary>Check if a point is contained within a polyline.</summary>
-    /// <returns>0 on success, 1 if pline is null</returns>
-    [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int cavc_pline_contains(IntPtr pline, double x, double y, IntPtr options, out int result);
     #endregion
 
     #endregion
@@ -466,8 +465,10 @@ public struct CavcBooleanOptions
 {
     /// <summary>Spatial index of the first polyline segment bounding boxes.</summary>
     public IntPtr pline1_aabb_index;
+
     /// <summary>Positive real number used to determine if two positions are equal.</summary>
     public double pos_equal_eps;
+
     /// <summary>Positive real number used to determine collapsed area threshold (set to NaN for None).</summary>
     public double collapsed_area_eps;
 }
@@ -478,8 +479,10 @@ public struct CavcShapeOffsetOptions
 {
     /// <summary>Positive real number used to determine if two positions are equal.</summary>
     public double pos_equal_eps;
+
     /// <summary>Positive real number used to determine if two real numbers are equal.</summary>
     public double slice_join_eps;
+
     /// <summary>Positive real number used to determine if two real numbers are equal.</summary>
     public double offset_dist_eps;
 }
@@ -488,14 +491,20 @@ public struct CavcShapeOffsetOptions
 [StructLayout(LayoutKind.Sequential)]
 public struct CavcPlineSelfIntersectOptions
 {
+    public IntPtr pline_aabb_index;
+
     /// <summary>Positive real number used to determine if two positions are equal.</summary>
     public double pos_equal_eps;
+
+    public int include;
 }
 
 /// <summary>Options for cavc_pline_contains.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct CavcPlineContainsOptions
 {
+    public IntPtr pline1_aabb_index;
+
     /// <summary>Positive real number used to determine if two positions are equal.</summary>
     public double pos_equal_eps;
 }
